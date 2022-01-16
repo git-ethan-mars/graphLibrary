@@ -8,12 +8,6 @@ class Graph:
     def __init__(self, nodes_count):
         self.nodes = [Node(i) for i in range(0, nodes_count)]
 
-    def length(self):
-        return len(self.nodes)
-
-    def get_node(self, index):
-        return self.nodes[index]
-
     def connect(self, index1, index2, weight=1):
         return Node.connect(self.nodes[index1], self.nodes[index2], weight, self)
 
@@ -52,7 +46,11 @@ class Graph:
             graph.connect(incident_nodes[i], incident_nodes[i + 1], incident_nodes[i + 2])
         return graph
 
-    def _dfs(self,start_node):
+    def dfs(self, node_index):
+        return self._dfs(self.nodes[node_index])
+
+    @staticmethod
+    def _dfs(start_node):
         visited = set()
         planned = [start_node]
         visited.add(start_node)
@@ -68,18 +66,12 @@ class Graph:
                     visited.add(incident_node)
         return trace
 
-    def dfs(self, node_index):
-        return self._dfs(self.nodes[node_index])
-
     def bfs(self, node_index):
-        return self._dfs(self.nodes[node_index])
-
-    def _bfs(self, start_node):
         visited = set()
-        planned = deque(start_node)
-        visited.add(start_node)
+        planned = deque([self.nodes[node_index]])
+        visited.add(self.nodes[node_index])
         trace = dict()
-        trace[start_node.node_number] = 0
+        trace[self.nodes[node_index].node_number] = 0
         while len(planned) != 0:
             current = planned.popleft()
             for edge in current.incident_edges():
@@ -101,23 +93,32 @@ class Graph:
                     edge.finish.node_number]:
                     dist[edge.finish.node_number] = dist[edge.start.node_number] + edge.weight
         for edge in self.edges:
-            if dist[edge.start.node_number] != float("Inf") and dist[edge.start.node_number] + edge.weight < dist[edge.finish.node_number]:
+            if dist[edge.start.node_number] != float("Inf") and dist[edge.start.node_number] + edge.weight < dist[
+                edge.finish.node_number]:
                 raise ValueError("Graph contains negative weight cycle")
         return dist
 
-class OldGraph:
-    def __init__(self):
-        self._edges = dict()
-        self._node = set()
+    def dijkstra(self, start_node: int):
+        not_visited = self.nodes.copy()
+        track = dict()
+        track[self.nodes[start_node]] = 0
+        while True:
+            to_open = None
+            best_price = float('inf')
+            for e in not_visited:
+                if e in track and track[e] < best_price:
+                    best_price = track[e]
+                    to_open = e
+            if to_open is None:
+                result = dict()
+                for x in track:
+                    result[x.node_number] = track[x]
+                return result
 
-    def add_edge(self, start_node, end_node, weight=0):
-        self._node.add(start_node)
-        self._node.add(end_node)
-        if not start_node in self._edges.keys():
-            self._edges[start_node] = set()
-        if not end_node in self._edges.keys():
-            self._edges[end_node] = set()
-        self._edges[start_node].add((end_node, weight))
+            for e in [x for x in to_open.incident_edges() if x.start == to_open]:
+                current_price = track[to_open] + e.weight
+                next_node = e.other_node(to_open)
+                if (not next_node in track) or track[next_node] > current_price:
+                    track[next_node] = current_price
 
-    def get_edges(self):
-        return self._edges
+            not_visited.remove(to_open)
